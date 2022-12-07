@@ -44,7 +44,7 @@ public class Main {
                 .compile("config/load/enabled")
                 .evaluate(doc));
         String loadFileName = xPath
-                .compile("config/load/filename")
+                .compile("config/load/fileName")
                 .evaluate(doc);
         String loadFormat = xPath
                 .compile("config/load/format")
@@ -88,7 +88,7 @@ public class Main {
                     .compile("config/save/enabled")
                     .evaluate(doc));
             String saveFileName = xPath
-                    .compile("config/save/filename")
+                    .compile("config/save/fileName")
                     .evaluate(doc);
             String saveFormat = xPath
                     .compile("config/save/format")
@@ -117,7 +117,7 @@ public class Main {
                 .compile("config/log/enabled")
                 .evaluate(doc));
         String logFileName = xPath
-                .compile("config/log/filename")
+                .compile("config/log/fileName")
                 .evaluate(doc);
 
         if (isLogEnabled) {
