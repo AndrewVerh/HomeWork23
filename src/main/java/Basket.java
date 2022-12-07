@@ -13,26 +13,27 @@ import java.util.List;
 
 import static java.lang.System.out;
 
-public class Basket {
-
-    protected int[] prices;
+public class Basket implements Serializable {
     protected String[] nameProduct;
+    protected int[] prices;
     protected int[] prodAmount;
-//    protected int number;
-//    protected int amount;
 
-    public Basket(int[] prices, String[] nameProduct, int[] prodAmount) {
-//        this.number = number;
-//        this.amount = amount;
+    public Basket(String[] nameProduct, int[] prices) {
+
         this.prices = prices;
         this.nameProduct = nameProduct;
-        this.prodAmount = prodAmount;
+        this.prodAmount = new int[nameProduct.length];
     }
 
+    private Basket() {
+    }
+
+    //Метод добавления продукта и его количества в корзину
     public void addToCart(int productNumber, int amount) {  //номер продукта, штук продукта
         prodAmount[productNumber] += amount;
     }
 
+    //Метод вывода на экран корзины продуктов
     public void printCart() {
         out.println("В корзину добавлено:");
         int sumProducts = 0;
@@ -43,25 +44,74 @@ public class Basket {
             sumProducts = sumProducts + prices[i] * prodAmount[i];
         }
         out.println("Общая сумма покупок: " + sumProducts + " руб.");
-
     }
 
+    //=======================НАЧАЛО РАБОТЫ С ТЕКСТОВЫМ ФАЙЛОМ=======================
+    //сохраняем в текстовый файл *.txt
+    public void saveTxtFile(File textFile) throws IOException {
+        try (PrintWriter out = new PrintWriter(textFile)) {
+            out.println(prodAmount.length); //сохраняем размер массива
+            for (int i = 0; i < nameProduct.length; i++) {
+                out.println(nameProduct[i] + "\t" + prices[i] + "\t" + prodAmount[i]);
+            }
+        }
+    }
+
+    //чтение текстового файла корзины *.txt
+    public static Basket loadFromTxtFile(File textFile) throws IOException {
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(textFile))) {
+
+            //считываем построчно данные, переданные текстФайлом
+            int size = Integer.parseInt(reader.readLine()); //извлекаем размер массива - 1ю строку
+            String[] names = new String[size];
+            int[] prices = new int[size];
+            int[] amounts = new int[size];
+
+            //добавляем продукт, цену и количество в массивы
+            for (int i = 0; i < size; i++) {
+                String line = reader.readLine();
+                String[] parts = line.split("\t");
+                names[i] = parts[0];
+                prices[i] = Integer.parseInt(parts[1]);
+                amounts[i] = Integer.parseInt(parts[2]);
+            }
+        }
+        return new Basket();
+    }
+    //=======================КОНЕЦ РАБОТЫ С ТЕКСТОВЫМ ФАЙЛОМ=======================
+
+
+    //=======================НАЧАЛО РАБОТЫ С BIN-ФАЙЛОМ=======================
+    //Запись файла в формат *.bin
+    public void saveBinFile(File textFile) throws IOException {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(textFile))) {
+            oos.writeObject(this);
+        }
+    }
+
+    //Чтение *.bin-файла
+    public static Basket loadFromBinFile(File textFile) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(textFile))) {
+            return (Basket) ois.readObject();
+        }
+    }
+    //=======================КОНЕЦ РАБОТЫ С BIN-ФАЙЛОМ=======================
+
+
+    //=======================НАЧАЛО РАБОТЫ С JSON-ФАЙЛОМ=======================
     //Запись файла в формат *.json
     public void saveJSON(File textFile) throws IOException {
 
-        GsonBuilder gsb = new GsonBuilder();
-        Gson gson = gsb.create();
-
-        try (FileWriter writer = new FileWriter(textFile)) {
-            writer.write(gson.toJson(this));
-            writer.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
+        try (PrintWriter writer = new PrintWriter(textFile)) {
+            Gson gson = new Gson();
+            String json = gson.toJson(this);
+            writer.println(json);
         }
     }
 
     //Чтение файла формата *.json
-    public Basket loadFromJson (File textFile) throws IOException, ParseException {
+    public static Basket loadFromJson(File textFile) throws IOException, ParseException {
 
         GsonBuilder gsb = new GsonBuilder();
         Gson gson = gsb.create();
@@ -70,47 +120,6 @@ public class Basket {
 
         return basket;
     }
+    //=======================КОНЕЦ РАБОТЫ С JSON-ФАЙЛОМ=======================
 
-
-
-    static Basket loadFromTxtFile(File textFile) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(textFile))) {
-            //считываем построчно данные, переданные текстФайлом
-            String line1 = reader.readLine();
-            String line2 = reader.readLine();
-            String line3 = reader.readLine();
-
-            //Создание массива строк из 1й строки и перевод его значений в число
-            String[] exeptedPriceArr = line1.split("@");
-            int[] exeptedPriceArrInt = new int[exeptedPriceArr.length];
-            for (int i = 0; i < exeptedPriceArr.length; i++) {
-                exeptedPriceArrInt[i] = Integer.parseInt(exeptedPriceArr[i]);
-            }
-            //Создание массива строк из 2й строки
-            String[] exeptedNameProduct = line2.split("@");
-
-            //Создание массива строк из 3й строки и перевод его значений в число
-            String[] exeptedCountProduct = line3.split("@");
-            int[] exeptedCountProductInt = new int[exeptedCountProduct.length];
-            for (int i = 0; i < exeptedCountProduct.length; i++) {
-                exeptedCountProductInt[i] = Integer.parseInt(exeptedCountProduct[i]);
-            }
-
-            //Вывод на экран всех строк, извлеченных из файла
-            for (String s : exeptedPriceArr) {
-                System.out.print(s + " руб./шт., ");
-            }
-            System.out.print("\n");
-            for (String s : exeptedNameProduct) {
-                System.out.print(s + ", ");
-            }
-            System.out.print("\n");
-            for (String s : exeptedCountProduct) {
-                System.out.print(s + " шт., ");
-            }
-            return new Basket(exeptedPriceArrInt, exeptedNameProduct, exeptedCountProductInt);
-        } catch (IOException e) {
-            throw new RuntimeException();
-        }
-    }
 }

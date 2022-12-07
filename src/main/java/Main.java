@@ -1,12 +1,13 @@
 import org.json.simple.parser.ParseException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -17,12 +18,11 @@ import java.util.Scanner;
 import java.util.Arrays;
 
 public class Main {
-    public static void main(String[] args) throws IOException, ParseException, ParserConfigurationException, SAXException {
+    public static void main(String[] args) throws IOException, ParseException, ParserConfigurationException, SAXException, XPathExpressionException, ClassNotFoundException {
 
         String[] listOfProducts = {"Хлеб", "Яблоки", "Молоко 2,5%"};
         int[] prices = {40, 95, 49}; // 0 - 40, 1 - 95, 2 - 49
         int[] countIndex = new int[prices.length]; //массив хранения количества товара по позициям (индексам)
-//        int[] sumIndex = new int[prices.length]; //массив хранения общей суммы по позициям
 
         // Вывод списка продуктов с ценами на экран
         System.out.println("Список возможных продуктов:");
@@ -34,9 +34,35 @@ public class Main {
         int productNumber = 0;
         int productCount = 0;
 
-        //Создаем объекты классов корзины и ведения покупок
-        ClientLog cl = new ClientLog();
-        Basket basket = new Basket(prices, listOfProducts, countIndex);
+//==================Извлечение блока <load> из файла shop.xml==================
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new File("shop.xml"));
+
+        XPath xPath = XPathFactory.newInstance().newXPath();
+        boolean isLoadEnabled = Boolean.parseBoolean(xPath
+                .compile("config/load/enabled")
+                .evaluate(doc));
+        String loadFileName = xPath
+                .compile("config/load/filename")
+                .evaluate(doc);
+        String loadFormat = xPath
+                .compile("config/load/format")
+                .evaluate(doc);
+
+        if (isLoadEnabled) {
+            switch (loadFormat) {
+                case "text" -> Basket.loadFromTxtFile(new File(loadFileName));
+                case "bin" -> Basket.loadFromBinFile(new File(loadFileName));
+                case "json" -> Basket.loadFromJson(new File(loadFileName));
+            }
+        } else {
+            Basket basket = new Basket(listOfProducts, prices);
+        }
+//==================Конец извлечения блока <load> файла shop.xml==================
+
+        //Создаем объекты класса корзины
+        Basket basket = new Basket(listOfProducts, prices);
 
         while (true) {
             Scanner scanner = new Scanner(System.in);
@@ -50,28 +76,59 @@ public class Main {
 
             // Разделяем введенные данные на два числа (1 -номер продукта и 2 - количество)
             String[] parts = input.split(" ");
-            productNumber = Integer.parseInt(parts[0])-1; //это числовой индекс продукта
+            productNumber = Integer.parseInt(parts[0]) - 1; //это числовой индекс продукта
             productCount = Integer.parseInt(parts[1]); //это множитель количества этого продукта
 
             //Добавляем количество продуктов в корзину
             basket.addToCart(productNumber, productCount);
 
-            //Сохранение покупки клиентом
-            cl.log(productNumber, productCount);
+            //=========Извлечение блока <save> из файла shop.xml=========
 
+            boolean isSaveEnabled = Boolean.parseBoolean(xPath
+                    .compile("config/save/enabled")
+                    .evaluate(doc));
+            String saveFileName = xPath
+                    .compile("config/save/filename")
+                    .evaluate(doc);
+            String saveFormat = xPath
+                    .compile("config/save/format")
+                    .evaluate(doc);
+
+            if (isSaveEnabled) {
+                switch (saveFormat) {
+                    case "text" -> basket.saveTxtFile(new File(saveFileName));
+                    case "bin" -> basket.saveBinFile(new File(saveFileName));
+                    case "json" -> basket.saveJSON(new File(saveFileName));
+                }
+            }
+            //=========Конец извлечения блока <save> из файла shop.xml=========
+
+        } //конец цикла while(true)
+
+//==================Извлечение блока <log> из файла shop.xml==================
+
+        //Создаем объект класса ведения покупок
+        ClientLog cl = new ClientLog();
+
+        //Сохранение покупки клиентом
+        cl.log(productNumber, productCount);
+
+        boolean isLogEnabled = Boolean.parseBoolean(xPath
+                .compile("config/log/enabled")
+                .evaluate(doc));
+        String logFileName = xPath
+                .compile("config/log/filename")
+                .evaluate(doc);
+
+        if (isLogEnabled) {
             //экспорт в файл *.csv
-            cl.exportAsCSV(new File("log.csv"));
-
-            //экспорт в файл *.json
-            basket.saveJSON(new File("basket.json"));
-
+            cl.exportAsCSV(new File(logFileName));
         }
-        //выводим корзину на экран
+//==================Конец извлечения блока <log> из файла shop.xml==================
+
+        // выводим корзину на экран
         basket.printCart();
-
-        basket.loadFromJson(new File("basket.json"));
     }
-
 }
 
 
